@@ -51,6 +51,9 @@ build target='':
 	GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o bin/windows/{{BINARY_NAME}}.exe {{SOURCE_PATH}}
 	just distro windows_x64 bin/windows/{{BINARY_NAME}}.exe
 
+# Cleanup around here!
+clean:
+	rm -f DivvyUpTheLoot_*.csv
 
 # Setup distrobution archive
 distro arch file:
@@ -71,16 +74,59 @@ distro arch file:
 	lsd -hl "../../distro/{{DISTRO_NAME}}-v${ver}"
 
 
+# Pretty Print the last Divvy output CSV
+csv-loot:
+	#!/bin/sh
+	csv_count=$(ls -1 DivvyUpTheLoot_*.csv 2>/dev/null | wc -l)
+	if [ ${csv_count} -gt 0 ]; then
+		file=$(ls -1 DivvyUpTheLoot_*.csv | tail -1) || exit 0
+		echo "csvtk pretty ${file}"
+		csvtk pretty ${file}
+	fi
+
+
 # Run app
-run +args='':
+run +args='loot.csv':
 	just _term-wipe
-	go run {{SOURCE_PATH}} {{args}} Giveaway-Points.csv
+	go run {{SOURCE_PATH}} {{args}}
 	@echo
 	@echo "CSV Files:"
-	@lsd -al *.csv
+	lsd -al *.csv
 	@echo
-	csvtk pretty $(ls -1 DivvyUpTheLoot_*.csv | tail -1)
+	@just csv-loot
 
+# Test app
+@test:
+	just build
+	echo
+	hr
+	echo
+	@bin/macos_amd64/{{BINARY_NAME}} -version
+	echo
+	hr
+	echo
+	@bin/macos_amd64/{{BINARY_NAME}} -h
+	echo
+	hr
+	echo
+	@bin/macos_amd64/{{BINARY_NAME}} -csv -pick 1 random.csv
+	sleep 1
+	echo
+	just csv-loot
+	echo
+	hr
+	echo
+	@bin/macos_amd64/{{BINARY_NAME}} -csv -pick -1 random.csv
+	sleep 1
+	echo
+	just csv-loot
+	echo
+	hr
+	echo
+	@bin/macos_amd64/{{BINARY_NAME}} -csv loot.csv
+	sleep 1
+	echo
+	just csv-loot
 
 
 # Wipes the terminal buffer for a clean start

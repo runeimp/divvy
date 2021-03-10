@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	appName    = "Divvy up the Loot"
+	appName    = "Divvy Up the LOOT"
 	appVersion = "1.0.0"
 	cliName    = "divvy"
 	usage      = `Usage: %s [OPTIONS] CSV_FILE
@@ -27,7 +27,7 @@ of the prize.
 
 Example CSV:
 ------------
-"Players","Gold Watch","Silver Necklace","Dagger"
+Players,"Gold Watch","Silver Necklace",Dagger
 "Lumpy Thumpkin",4,,2
 "Scarlett Jewels",,4,3
 "Garret Theivington",,,9
@@ -42,7 +42,6 @@ var (
 	binPath       string
 	csvInputName  string
 	csvOutputName = "DivvyUpTheLoot"
-	lootPath      string
 	sigs          = make(chan os.Signal, 1)
 )
 
@@ -64,7 +63,8 @@ func main() {
 	lootDataPtr := flag.Bool("loot", false, "Display loot data")
 	lootLabelPtr := flag.String("loot-label", "Loot", "Set the loot label")
 	noWinnerDataPtr := flag.Bool("no-winners", false, "Don't display winner data")
-	playerLabelPtr := flag.String("player-label", "Player", "Set the player label")
+	pickPtr := flag.Int("pick", 0, "Max picks from list. Use -1 to randomize the list.")
+	playerLabelPtr := flag.String("player-label", "", "Set the player label")
 	tokenLabelPtr := flag.String("token-label", "Tokens", "Set the loot label")
 	versionPtr := flag.Bool("version", false, "Display version info")
 
@@ -73,7 +73,11 @@ func main() {
 
 		flag.VisitAll(func(f *flag.Flag) {
 			optionName := fmt.Sprintf("-%s", f.Name)
-			fmt.Fprintf(flag.CommandLine.Output(), "  %-13s  %s (default: %v)\n", optionName, f.Usage, f.DefValue) //
+			if len(f.DefValue) == 0 {
+				fmt.Fprintf(flag.CommandLine.Output(), "  %-13s  %s (default: 1st field of the csv header)\n", optionName, f.Usage)
+			} else {
+				fmt.Fprintf(flag.CommandLine.Output(), "  %-13s  %s (default: %v)\n", optionName, f.Usage, f.DefValue)
+			}
 		})
 		fmt.Fprintf(flag.CommandLine.Output(), usageProlog)
 	}
@@ -109,15 +113,21 @@ func main() {
 	csvOutputName = fmt.Sprintf("%s_%s.csv", csvOutputName, appStart)
 	// csvOutputName = fmt.Sprintf("%s/%s_%s.csv", binPath, csvOutputName, appStart)
 
-	err := divvy.ReadCSV(csvInputName)
+	err := divvy.ReadCSV(csvInputName, *pickPtr)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 		os.Exit(1)
 	}
 	if *noWinnerDataPtr == false {
 		winners := divvy.GetWinners()
-		for _, winner := range winners {
-			fmt.Printf("%s %q got %q\n", *playerLabelPtr, winner.Name, winner.Loot)
+		if *pickPtr == 0 {
+			for _, winner := range winners {
+				fmt.Printf("%q got %q\n", winner.Name, winner.Loot)
+			}
+		} else {
+			for _, winner := range winners {
+				fmt.Printf("%q\n", winner.Name)
+			}
 		}
 	}
 
