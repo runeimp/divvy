@@ -1,5 +1,5 @@
-Divvy Up the LOOT
-=================
+Divvy Up the LOOT v1.0.0
+========================
 
 Command line tool for facilitating giveaways, lotteries, and raffles via CSV import and export.
 
